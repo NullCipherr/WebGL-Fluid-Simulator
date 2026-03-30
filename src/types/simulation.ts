@@ -1,5 +1,7 @@
 export type ViewMode = 'density' | 'velocity' | 'pressure' | 'particles';
 
+export type PresetKey = 'calm' | 'viscous' | 'chaotic' | 'smoke';
+
 export interface Obstacle {
   id: string;
   type: 'circle' | 'rect';
@@ -25,12 +27,47 @@ export interface SimulationConfig {
   glowIntensity: number;
   colorPalette: 'default' | 'fire' | 'ocean' | 'plasma';
   vorticity: number;
+  renderBackend: 'classic' | 'experimental-gpu';
+}
+
+export interface BenchmarkResult {
+  seed: number;
+  steps: number;
+  dt: number;
+  elapsedMs: number;
+  avgFrameTimeMs: number;
+  fpsEstimate: number;
+  checksum: string;
+  createdAt: string;
 }
 
 export interface SimulationState {
   isRunning: boolean;
   fps: number;
+  frameTimeMs: number;
+  frameTimeHistoryMs: number[];
   isInitialized: boolean;
   obstacles: Obstacle[];
+  activeParticles: number;
+  estimatedMemoryMB: number;
+  computeLoadPct: number;
+  benchmarkRunning: boolean;
+  lastBenchmarkResult: BenchmarkResult | null;
   resetTrigger: number;
+}
+
+export interface CustomPreset {
+  id: string;
+  name: string;
+  config: Pick<
+    SimulationConfig,
+    | 'density'
+    | 'viscosity'
+    | 'impulseForce'
+    | 'dissipation'
+    | 'velocityDissipation'
+    | 'vorticity'
+    | 'splatRadius'
+    | 'colorPalette'
+  >;
 }

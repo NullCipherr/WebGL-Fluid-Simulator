@@ -315,4 +315,29 @@ export class FluidSolver {
     x[W - 1 + 0 * W] = 0.5 * (x[W - 2 + 0 * W] + x[W - 1 + 1 * W]);
     x[W - 1 + (H - 1) * W] = 0.5 * (x[W - 2 + (H - 1) * W] + x[W - 1 + (H - 2) * W]);
   }
+
+  public getEstimatedMemoryBytes(): number {
+    return (
+      this.density.byteLength +
+      this.velocityX.byteLength +
+      this.velocityY.byteLength +
+      this.densityOld.byteLength +
+      this.velocityXOld.byteLength +
+      this.velocityYOld.byteLength +
+      this.curl.byteLength
+    );
+  }
+
+  public dispose(): void {
+    this.width = 0;
+    this.height = 0;
+    this.size = 0;
+    this.density = new Float32Array(0);
+    this.velocityX = new Float32Array(0);
+    this.velocityY = new Float32Array(0);
+    this.densityOld = new Float32Array(0);
+    this.velocityXOld = new Float32Array(0);
+    this.velocityYOld = new Float32Array(0);
+    this.curl = new Float32Array(0);
+  }
 }

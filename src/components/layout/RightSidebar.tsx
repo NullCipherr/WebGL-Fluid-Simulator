@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, Cpu, Database, Network, Zap, Target, Layers } from 'lucide-react';
+import { Activity, Cpu, Database, Gauge, Network, Zap, Target, Layers } from 'lucide-react';
 import { useSimulation } from '../../context/SimulationContext';
 import { SectionCard } from '../ui/SectionCard';
 import { MetricCard } from '../ui/MetricCard';
@@ -7,11 +7,26 @@ import { MetricCard } from '../ui/MetricCard';
 export const RightSidebar: React.FC = () => {
   const { state, config } = useSimulation();
 
-  // Mocked data for the premium feel
-  const frameTime = (1000 / Math.max(state.fps, 1)).toFixed(1);
-  const particleCount = config.viewMode === 'particles' || config.viewMode === 'density' ? '15,000' : '0';
-  const memoryUsage = (Math.random() * 10 + 45).toFixed(1); // Mocked memory usage
-  const computeLoad = (Math.random() * 20 + 60).toFixed(0); // Mocked compute load
+  const frameTime = state.frameTimeMs > 0 ? state.frameTimeMs.toFixed(1) : '0.0';
+  const particleCount =
+    config.viewMode === 'particles' || config.viewMode === 'density'
+      ? state.activeParticles.toLocaleString('pt-BR')
+      : '0';
+  const memoryUsage = state.estimatedMemoryMB.toFixed(1);
+  const computeLoad = state.computeLoadPct.toString();
+  const frameSamples = state.frameTimeHistoryMs;
+  const sortedSamples = [...frameSamples].sort((a, b) => a - b);
+  const minFrame = sortedSamples.length > 0 ? sortedSamples[0] : 0;
+  const maxFrame = sortedSamples.length > 0 ? sortedSamples[sortedSamples.length - 1] : 0;
+  const avgFrame =
+    frameSamples.length > 0
+      ? frameSamples.reduce((sum, item) => sum + item, 0) / frameSamples.length
+      : 0;
+  const p95Frame =
+    sortedSamples.length > 0
+      ? sortedSamples[Math.min(sortedSamples.length - 1, Math.floor(sortedSamples.length * 0.95))]
+      : 0;
+  const benchmark = state.lastBenchmarkResult;
 
   return (
     <aside className="w-72 bg-[#0a0a0c]/90 border-l border-white/10 flex flex-col h-full overflow-y-auto backdrop-blur-2xl shrink-0 z-40 shadow-[-4px_0_24px_rgba(0,0,0,0.5)]">
@@ -49,11 +64,11 @@ export const RightSidebar: React.FC = () => {
         <SectionCard title="Diagnostics" icon={Database} defaultOpen={true}>
           <div className="flex flex-col gap-3">
             <div className="flex justify-between items-center text-sm">
-              <span className="text-slate-400">VRAM Usage</span>
+              <span className="text-slate-400">Mem. Estimada</span>
               <span className="text-slate-200 font-mono">{memoryUsage} MB</span>
             </div>
             <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-              <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${(parseFloat(memoryUsage) / 100) * 100}%` }} />
+              <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.min(100, (parseFloat(memoryUsage) / 256) * 100)}%` }} />
             </div>
             
             <div className="flex justify-between items-center text-sm mt-2">
@@ -67,6 +82,77 @@ export const RightSidebar: React.FC = () => {
             <div className="flex justify-between items-center text-sm mt-2">
               <span className="text-slate-400">Grid Resolution</span>
               <span className="text-slate-200 font-mono">{config.gridSize}x{config.gridSize}</span>
+            </div>
+          </div>
+        </SectionCard>
+
+        {/* Benchmark Mode */}
+        <SectionCard title="Benchmark Mode" icon={Cpu} defaultOpen={true}>
+          <div className="flex flex-col gap-2 text-xs font-mono">
+            <div className="flex justify-between">
+              <span className="text-slate-400">Status</span>
+              <span className={state.benchmarkRunning ? 'text-amber-300' : 'text-emerald-300'}>
+                {state.benchmarkRunning ? 'EXECUTANDO' : 'IDLE'}
+              </span>
+            </div>
+            {benchmark ? (
+              <>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Seed</span>
+                  <span className="text-slate-200">{benchmark.seed}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">FPS Est.</span>
+                  <span className="text-slate-200">{benchmark.fpsEstimate.toFixed(1)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Frame Médio</span>
+                  <span className="text-slate-200">{benchmark.avgFrameTimeMs.toFixed(2)}ms</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Checksum</span>
+                  <span className="text-slate-200 truncate max-w-[150px]" title={benchmark.checksum}>
+                    {benchmark.checksum}
+                  </span>
+                </div>
+              </>
+            ) : (
+              <div className="text-slate-500">Dispare o benchmark no TopBar para gerar baseline comparável.</div>
+            )}
+          </div>
+        </SectionCard>
+
+        {/* Frame Profiler */}
+        <SectionCard title="Frame Profiler" icon={Gauge} defaultOpen={true}>
+          <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+              <div className="bg-slate-900/40 border border-white/5 rounded px-2 py-1.5">
+                <div className="text-slate-400">Min</div>
+                <div className="text-slate-200">{minFrame.toFixed(1)}ms</div>
+              </div>
+              <div className="bg-slate-900/40 border border-white/5 rounded px-2 py-1.5">
+                <div className="text-slate-400">Média</div>
+                <div className="text-slate-200">{avgFrame.toFixed(1)}ms</div>
+              </div>
+              <div className="bg-slate-900/40 border border-white/5 rounded px-2 py-1.5">
+                <div className="text-slate-400">P95</div>
+                <div className="text-slate-200">{p95Frame.toFixed(1)}ms</div>
+              </div>
+              <div className="bg-slate-900/40 border border-white/5 rounded px-2 py-1.5">
+                <div className="text-slate-400">Max</div>
+                <div className="text-slate-200">{maxFrame.toFixed(1)}ms</div>
+              </div>
+            </div>
+
+            <div className="h-14 flex items-end gap-1 rounded bg-slate-900/30 border border-white/5 p-2">
+              {frameSamples.slice(-30).map((sample, idx) => (
+                <div
+                  key={`${idx}-${sample.toFixed(2)}`}
+                  className="flex-1 rounded-sm bg-cyan-400/70"
+                  style={{ height: `${Math.max(8, Math.min(100, (sample / 33) * 100))}%` }}
+                  title={`${sample.toFixed(2)}ms`}
+                />
+              ))}
             </div>
           </div>
         </SectionCard>

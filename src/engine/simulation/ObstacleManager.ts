@@ -31,6 +31,10 @@ export class ObstacleManager {
     return this.obstacleGrid;
   }
 
+  public getObstacleGridByteSize(): number {
+    return this.obstacleGrid.byteLength;
+  }
+
   public getObstacleAt(normX: number, normY: number): number {
     for (let i = this.obstacles.length - 1; i >= 0; i--) {
       const obs = this.obstacles[i];
@@ -99,5 +103,12 @@ export class ObstacleManager {
         }
       }
     }
+  }
+
+  public dispose(): void {
+    this.obstacles = [];
+    this.gridWidth = 0;
+    this.gridHeight = 0;
+    this.obstacleGrid = new Uint8Array(0);
   }
 }

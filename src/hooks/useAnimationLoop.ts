@@ -10,6 +10,7 @@ export function useAnimationLoop(engine: FluidEngine | null) {
   const lastTimeRef = useRef<number>(0);
   const lastFpsUpdateRef = useRef<number>(0);
   const { state, setState } = useSimulation();
+  const targetFrameTimeMs = 1000 / 60;
 
   const animate = (time: number) => {
     if (!engine) {
@@ -24,7 +25,19 @@ export function useAnimationLoop(engine: FluidEngine | null) {
       if (deltaTime > 0) {
         if (time - lastFpsUpdateRef.current > 500) {
           const fps = Math.round(1 / deltaTime);
-          setState(prev => ({ ...prev, fps }));
+          const frameTimeMs = deltaTime * 1000;
+          const computeLoadPct = Math.min(100, (frameTimeMs / targetFrameTimeMs) * 100);
+          const metrics = engine.getRuntimeMetrics();
+
+          setState(prev => ({
+            ...prev,
+            fps,
+            frameTimeMs,
+            frameTimeHistoryMs: [...prev.frameTimeHistoryMs, frameTimeMs].slice(-90),
+            activeParticles: metrics.activeParticles,
+            estimatedMemoryMB: Number(metrics.estimatedMemoryMB.toFixed(1)),
+            computeLoadPct: Number(computeLoadPct.toFixed(0)),
+          }));
           lastFpsUpdateRef.current = time;
         }
       }

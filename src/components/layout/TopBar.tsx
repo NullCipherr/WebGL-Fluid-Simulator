@@ -1,17 +1,49 @@
 import React, { useState } from 'react';
-import { Activity, Maximize, Settings, HelpCircle, RefreshCw, Layers } from 'lucide-react';
-import { useSimulation } from '../../context/SimulationContext';
+import { Activity, Gauge, Maximize, Settings, HelpCircle, RefreshCw, Save, Trash2 } from 'lucide-react';
+import { PRESETS, useSimulation } from '../../context/SimulationContext';
 import { PremiumButton } from '../ui/PremiumButton';
 import { PremiumSelect } from '../ui/PremiumSelect';
 
 export const TopBar: React.FC = () => {
-  const { state, resetSimulation, applyPreset } = useSimulation();
+  const { state, resetSimulation, applyPreset, saveCustomPreset, removeCustomPreset, customPresets, runBenchmark } = useSimulation();
   const [preset, setPreset] = useState('calm');
 
   const handlePresetChange = (val: string) => {
     setPreset(val);
-    applyPreset(val as any);
+    applyPreset(val);
   };
+
+  const handleSavePreset = () => {
+    const suggested = `Preset ${new Date().toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    })}`;
+    const name = window.prompt('Nome do preset personalizado:', suggested);
+    if (!name) return;
+
+    const savedId = saveCustomPreset(name);
+    if (!savedId) return;
+    const optionValue = `custom:${savedId}`;
+    setPreset(optionValue);
+  };
+
+  const handleRemovePreset = () => {
+    if (!preset.startsWith('custom:')) return;
+    const customId = preset.replace('custom:', '');
+    removeCustomPreset(customId);
+    setPreset('calm');
+    applyPreset('calm');
+  };
+
+  const builtInOptions = Object.keys(PRESETS).map((key) => ({
+    value: key,
+    label: `Preset: ${key.charAt(0).toUpperCase()}${key.slice(1)}`,
+  }));
+
+  const customOptions = customPresets.map((presetItem) => ({
+    value: `custom:${presetItem.id}`,
+    label: `Custom: ${presetItem.name}`,
+  }));
 
   return (
     <header className="h-14 border-b border-white/10 bg-[#0a0a0c]/80 backdrop-blur-xl flex items-center justify-between px-4 shrink-0 z-50">
@@ -33,18 +65,34 @@ export const TopBar: React.FC = () => {
           <PremiumSelect
             label=""
             value={preset}
-            options={[
-              { value: 'calm', label: 'Preset: Calm' },
-              { value: 'viscous', label: 'Preset: Viscous' },
-              { value: 'chaotic', label: 'Preset: Chaotic' },
-              { value: 'smoke', label: 'Preset: Smoke' },
-            ]}
+            options={[...builtInOptions, ...customOptions]}
             onChange={handlePresetChange}
           />
         </div>
         <div className="h-4 w-px bg-white/10 mx-1" />
+        <PremiumButton variant="ghost" size="sm" onClick={handleSavePreset} title="Salvar preset atual">
+          <Save className="w-4 h-4" />
+        </PremiumButton>
+        <PremiumButton
+          variant="ghost"
+          size="sm"
+          onClick={handleRemovePreset}
+          title="Remover preset customizado"
+          className={!preset.startsWith('custom:') ? 'opacity-40 pointer-events-none' : ''}
+        >
+          <Trash2 className="w-4 h-4" />
+        </PremiumButton>
         <PremiumButton variant="ghost" size="sm" onClick={resetSimulation} title="Reset Simulation">
           <RefreshCw className="w-4 h-4" />
+        </PremiumButton>
+        <PremiumButton
+          variant="ghost"
+          size="sm"
+          onClick={runBenchmark}
+          title="Rodar benchmark reproduzível"
+          className={state.benchmarkRunning ? 'opacity-60 pointer-events-none' : ''}
+        >
+          <Gauge className="w-4 h-4" />
         </PremiumButton>
         <PremiumButton variant="ghost" size="sm" title="Toggle Fullscreen">
           <Maximize className="w-4 h-4" />

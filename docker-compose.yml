@@ -1,0 +1,9 @@
+services:
+  webgl-fluid-simulator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: webgl-fluid-simulator
+    ports:
+      - "8080:80"
+    restart: unless-stopped

@@ -5,6 +5,11 @@ import { ObstacleManager } from '../simulation/ObstacleManager';
 import { ParticleSystem } from '../simulation/ParticleSystem';
 import { InputController } from './InputController';
 
+export interface RuntimeMetrics {
+  activeParticles: number;
+  estimatedMemoryMB: number;
+}
+
 /**
  * Core Fluid Engine class.
  * Orchestrates the simulation state, renderer, and input controller.
@@ -83,5 +88,25 @@ export class FluidEngine {
 
   public getObstacleManager(): ObstacleManager {
     return this.obstacleManager;
+  }
+
+  public getRuntimeMetrics(): RuntimeMetrics {
+    const bytes =
+      this.solver.getEstimatedMemoryBytes() +
+      this.renderer.getEstimatedMemoryBytes() +
+      this.obstacleManager.getObstacleGridByteSize();
+
+    return {
+      activeParticles: this.particleSystem.getActiveCount(),
+      estimatedMemoryMB: bytes / (1024 * 1024),
+    };
+  }
+
+  public dispose(): void {
+    this.inputController.dispose();
+    this.renderer.dispose();
+    this.solver.dispose();
+    this.particleSystem.dispose();
+    this.obstacleManager.dispose();
   }
 }

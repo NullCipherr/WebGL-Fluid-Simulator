@@ -104,4 +104,20 @@ export class ParticleSystem {
   public getParticles(): Particle[] {
     return this.particles;
   }
+
+  public getActiveCount(): number {
+    let active = 0;
+    for (let i = 0; i < this.maxParticles; i++) {
+      if (this.particles[i].life > 0) active++;
+    }
+    return active;
+  }
+
+  public getMaxParticles(): number {
+    return this.maxParticles;
+  }
+
+  public dispose(): void {
+    this.particles = [];
+  }
 }

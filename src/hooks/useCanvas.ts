@@ -41,7 +41,9 @@ export function useCanvas() {
 
     return () => {
       window.removeEventListener('resize', handleResize);
-      // Future: engine.dispose()
+      engine.dispose();
+      engineRef.current = null;
+      setState(prev => ({ ...prev, isInitialized: false }));
     };
   }, []); // Run once on mount
 

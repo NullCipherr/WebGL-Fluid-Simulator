@@ -145,6 +145,15 @@ export const LeftSidebar: React.FC = () => {
 
         {/* Advanced */}
         <SectionCard title="Advanced Settings" icon={SlidersHorizontal} defaultOpen={false}>
+          <PremiumSelect
+            label="Render Backend"
+            value={config.renderBackend}
+            options={[
+              { value: 'classic', label: 'Classic (estável)' },
+              { value: 'experimental-gpu', label: 'Experimental GPU (beta)' },
+            ]}
+            onChange={(val) => updateConfig('renderBackend', val as any)}
+          />
           <PremiumSlider
             label="Grid Size (Resolution)"
             value={config.gridSize}

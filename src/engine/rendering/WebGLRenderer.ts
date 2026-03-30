@@ -6,6 +6,7 @@ import { ShaderProgram } from './webgl/ShaderProgram';
 import { Texture } from './webgl/Texture';
 import { quadVert } from './shaders/quad.vert';
 import { fluidFrag } from './shaders/fluid.frag';
+import { fluidExperimentalFrag } from './shaders/fluid.experimental.frag';
 import { particleVert } from './shaders/particle.vert';
 import { particleFrag } from './shaders/particle.frag';
 import { obstacleFrag } from './shaders/obstacle.frag';
@@ -17,6 +18,7 @@ export class WebGLRenderer {
   private height: number = 0;
 
   private fluidProgram!: ShaderProgram;
+  private fluidExperimentalProgram!: ShaderProgram;
   private particleProgram!: ShaderProgram;
   private obstacleProgram!: ShaderProgram;
 
@@ -63,6 +65,7 @@ export class WebGLRenderer {
 
   private initShaders(): void {
     this.fluidProgram = new ShaderProgram(this.gl, quadVert, fluidFrag);
+    this.fluidExperimentalProgram = new ShaderProgram(this.gl, quadVert, fluidExperimentalFrag);
     this.particleProgram = new ShaderProgram(this.gl, particleVert, particleFrag);
     this.obstacleProgram = new ShaderProgram(this.gl, quadVert, obstacleFrag);
   }
@@ -116,6 +119,19 @@ export class WebGLRenderer {
     this.gl.clear(this.gl.COLOR_BUFFER_BIT);
   }
 
+  public getEstimatedMemoryBytes(): number {
+    if (this.simWidth === 0 || this.simHeight === 0) return 0;
+
+    const pixelCount = this.simWidth * this.simHeight;
+    const densityBytes = pixelCount * 4;
+    const velocityXBytes = pixelCount * 4;
+    const velocityYBytes = pixelCount * 4;
+    const obstacleBytes = pixelCount;
+    const particleBufferBytes = this.particleData ? this.particleData.byteLength : 0;
+
+    return densityBytes + velocityXBytes + velocityYBytes + obstacleBytes + particleBufferBytes;
+  }
+
   public draw(solver: FluidSolver, obstacleManager: ObstacleManager, particleSystem: ParticleSystem, config: SimulationConfig): void {
     if (solver.width !== this.simWidth || solver.height !== this.simHeight) {
       this.initTextures(solver.width, solver.height);
@@ -138,25 +154,28 @@ export class WebGLRenderer {
 
     // Draw Fluid (always, to show grid or density)
     this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
-    this.fluidProgram.bind();
+    const activeFluidProgram =
+      config.renderBackend === 'experimental-gpu' ? this.fluidExperimentalProgram : this.fluidProgram;
+
+    activeFluidProgram.bind();
     
     this.densityTex.bind(0);
     this.velocityXTex.bind(1);
     this.velocityYTex.bind(2);
     
-    this.fluidProgram.setUniform1i('uDensityTex', 0);
-    this.fluidProgram.setUniform1i('uVelocityXTex', 1);
-    this.fluidProgram.setUniform1i('uVelocityYTex', 2);
-    this.fluidProgram.setUniform1i('uViewMode', viewModeInt);
+    activeFluidProgram.setUniform1i('uDensityTex', 0);
+    activeFluidProgram.setUniform1i('uVelocityXTex', 1);
+    activeFluidProgram.setUniform1i('uVelocityYTex', 2);
+    activeFluidProgram.setUniform1i('uViewMode', viewModeInt);
     
     let paletteInt = 0;
     if (config.colorPalette === 'fire') paletteInt = 1;
     if (config.colorPalette === 'ocean') paletteInt = 2;
     if (config.colorPalette === 'plasma') paletteInt = 3;
-    this.fluidProgram.setUniform1i('uPalette', paletteInt);
+    activeFluidProgram.setUniform1i('uPalette', paletteInt);
 
-    this.fluidProgram.setUniform1i('uShowGrid', config.showGrid ? 1 : 0);
-    this.fluidProgram.setUniform1f('uGridSize', 32.0); // Fixed grid size for better visibility
+    activeFluidProgram.setUniform1i('uShowGrid', config.showGrid ? 1 : 0);
+    activeFluidProgram.setUniform1f('uGridSize', 32.0); // Fixed grid size for better visibility
 
     this.gl.bindVertexArray(this.quadVao);
     this.gl.drawArrays(this.gl.TRIANGLES, 0, 6);
@@ -229,5 +248,26 @@ export class WebGLRenderer {
     this.gl.drawArrays(this.gl.POINTS, 0, activeCount);
     
     this.gl.bindVertexArray(null);
+  }
+
+  public dispose(): void {
+    if (this.densityTex) this.densityTex.dispose();
+    if (this.velocityXTex) this.velocityXTex.dispose();
+    if (this.velocityYTex) this.velocityYTex.dispose();
+    if (this.obstacleTex) this.obstacleTex.dispose();
+
+    if (this.fluidProgram) this.fluidProgram.dispose();
+    if (this.fluidExperimentalProgram) this.fluidExperimentalProgram.dispose();
+    if (this.particleProgram) this.particleProgram.dispose();
+    if (this.obstacleProgram) this.obstacleProgram.dispose();
+
+    if (this.quadVbo) this.gl.deleteBuffer(this.quadVbo);
+    if (this.quadVao) this.gl.deleteVertexArray(this.quadVao);
+    if (this.particleVbo) this.gl.deleteBuffer(this.particleVbo);
+    if (this.particleVao) this.gl.deleteVertexArray(this.particleVao);
+
+    this.particleData = new Float32Array(0);
+    this.simWidth = 0;
+    this.simHeight = 0;
   }
 }

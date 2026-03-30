@@ -8,6 +8,7 @@ export class InputController {
   private lastY: number = 0;
   private isRightClick: boolean = false;
   private draggedObstacleIndex: number = -1;
+  private readonly onContextMenu = (e: Event) => e.preventDefault();
 
   constructor(canvas: HTMLCanvasElement, engine: FluidEngine) {
     this.canvas = canvas;
@@ -18,7 +19,7 @@ export class InputController {
     this.canvas.addEventListener('mousedown', this.onPointerDown);
     this.canvas.addEventListener('mousemove', this.onPointerMove);
     window.addEventListener('mouseup', this.onPointerUp);
-    this.canvas.addEventListener('contextmenu', e => e.preventDefault());
+    this.canvas.addEventListener('contextmenu', this.onContextMenu);
     
     this.canvas.addEventListener('touchstart', this.onTouchStart, { passive: false });
     this.canvas.addEventListener('touchmove', this.onTouchMove, { passive: false });
@@ -29,10 +30,14 @@ export class InputController {
     this.canvas.removeEventListener('mousedown', this.onPointerDown);
     this.canvas.removeEventListener('mousemove', this.onPointerMove);
     window.removeEventListener('mouseup', this.onPointerUp);
+    this.canvas.removeEventListener('contextmenu', this.onContextMenu);
     
     this.canvas.removeEventListener('touchstart', this.onTouchStart);
     this.canvas.removeEventListener('touchmove', this.onTouchMove);
     window.removeEventListener('touchend', this.onPointerUp);
+    this.draggedObstacleIndex = -1;
+    this.isPointerDown = false;
+    this.isRightClick = false;
   }
 
   private inject(x: number, y: number, dx: number, dy: number) {
